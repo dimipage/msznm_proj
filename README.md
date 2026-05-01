@@ -51,11 +51,11 @@ Sistem je posebno koristan u neformalnim uslovima igranja kao što su školske s
 | OLED ekran 0.96" SSD1306 (SPI) | Prikaz rezultata |
 | 4× taktilni prekidač (4-pina) | Unos poena od strane igrača |
 | Pasivni buzzer | Zvučna signalizacija događaja u igri |
-| Breadboard i spojni kablovi | Prototipska veza komponenti |
+| Breadboard i kratkospojnici | Prototipska veza komponenti |
 
 ### Protokol komunikacije: ESP-NOW
 
-Za bežičnu komunikaciju korišćen je **ESP-NOW protokol** — Espressifov vlasnički protokol za direktnu komunikaciju između ESP8266/ESP32 uređaja. Odabran je iz sledećih razloga:
+Za bežičnu komunikaciju korišćen je **ESP-NOW protokol** - Espressifov vlasnički protokol za direktnu komunikaciju između ESP8266/ESP32 uređaja. Odabran je iz sledećih razloga:
 
 - Ne zahteva Wi-Fi ruter niti pristupnu tačku
 - Kašnjenje je ispod 1 ms
@@ -71,11 +71,11 @@ Za bežičnu komunikaciju korišćen je **ESP-NOW protokol** — Espressifov vla
 Sistem se sastoji od dve fizički odvojene jedinice koje komuniciraju bežično:
 
 - **Predajna jedinica** (NodeMCU): četiri dugmeta spojena na digitalne ulaze sa internim pull-up otpornicima. Bez eksternih otpornika. Dugmad su smeštena na breadboard-u i razdvojena po osama igrača.
-- **Prijemna jedinica** (D1 Mini): SPI OLED ekran spojen na 6 pinova (SCL, SDA, DC, RES, GND, VCC). Ekran osvežava sliku svaki put kada se primi nova poruka. Pasivni buzzer spojen direktno na pin D0 i GND — bez eksternih otpornika.
+- **Prijemna jedinica** (D1 Mini): SPI OLED ekran spojen na 6 pinova (SCL, SDA, DC, RES, GND, VCC). Ekran osvežava sliku svaki put kada se primi nova poruka. Pasivni buzzer spojen direktno na pin D0 i GND - bez eksternih otpornika.
 
 ### Softverska kompleksnost
 
-- **Debouncing dugmadi** bez `delay()` funkcije — korišćenjem praćenja stanja i vremenskih oznaka
+- **Debouncing dugmadi** bez `delay()` funkcije - korišćenjem praćenja stanja i vremenskih oznaka
 - **Detekcija kombinovanog pritiska** dugmadi oba igrača istovremeno sa vremenskim pragom od 2 sekunde A+ i B+ zajedno pokreću novi meč, A− i B− zajedno resetuju set. Ovaj dizajn zahteva saglasnost oba igrača za svaku specijalnu komandu, čime se sprečava slučajno aktiviranje.
 - **ESP-NOW callback rukovanje**: prijem podataka odvija se u prekidnoj rutini koja mora biti kratka. Svi sporedni procesi (ažuriranje ekrana, logika rezultata) prebačeni su u `loop()` funkciju korišćenjem volatile bita (`volatile bool`), čime se sprečava pad sistema usled prekoračenja watchdog tajmera
 - **Automatsko praćenje setova** prema pravilima stonog tenisa (11 poena, razlika 2)
@@ -87,7 +87,7 @@ Sistem se sastoji od dve fizički odvojene jedinice koje komuniciraju bežično:
 
 ## 5. Šema povezivanja
 
-### Predajnik — NodeMCU v3
+### Predajnik - NodeMCU v3
 
 ```
 NodeMCU v3
@@ -105,7 +105,7 @@ NodeMCU v3
 * Dugme zatvara strujno kolo prema GND pritiskom
 ```
 
-### Prijemnik — WeMos D1 Mini + OLED + Buzzer
+### Prijemnik - WeMos D1 Mini + OLED + Buzzer
 
 ```
 D1 Mini              OLED SSD1306 (SPI)
