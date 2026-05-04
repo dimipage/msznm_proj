@@ -29,6 +29,7 @@ Sistem je posebno koristan u neformalnim uslovima igranja kao što su školske s
   - Uzlazna trotaktna melodija - osvajanje seta
   - Srednji ton - reset ili nova igra
   - Startup signal pri uključivanju uređaja
+  - **Merenje dužine razmene**: senzor vibracija SW-420 montiran na predajnoj jedinici (sto) detektuje svaki odbitak loptice. Broj odbitaka se šalje prijemniku kao posebna poruka i prikazuje se na ekranu kao statistika trenutnog poena. Na kraju meča prikazuje se i najduža razmena.
 - **Kombinovani pritisak** dugmadi oba igrača istovremeno u trajanju od 2 sekunde pokreće posebne komande:
   - Oba igrača drže **+** dugme (A+ i B+): početak novog meča resetuje rezultat i setove
   - Oba igrača drže **−** dugme (A− i B−): resetovanje trenutnog seta
@@ -50,12 +51,13 @@ Sistem je posebno koristan u neformalnim uslovima igranja kao što su školske s
 | WeMos D1 Mini (ESP8266) | Prijemnik - prima podatke i upravlja ekranom |
 | OLED ekran 0.96" SSD1306 (SPI) | Prikaz rezultata |
 | 4× taktilni prekidač (4-pina) | Unos poena od strane igrača |
+| SW-420 senzor vibracija | Detekcija odbitaka loptice od stola |
 | Pasivni buzzer | Zvučna signalizacija događaja u igri |
-| Breadboard i spojni kablovi | Prototipska veza komponenti |
+| Breadboard i kratkospojnici | Prototipska veza komponenti |
 
 ### Protokol komunikacije: ESP-NOW
 
-Za bežičnu komunikaciju korišćen je **ESP-NOW protokol** — Espressifov vlasnički protokol za direktnu komunikaciju između ESP8266/ESP32 uređaja. Odabran je iz sledećih razloga:
+Za bežičnu komunikaciju korišćen je **ESP-NOW protokol** - Espressifov vlasnički protokol za direktnu komunikaciju između ESP8266/ESP32 uređaja. Odabran je iz sledećih razloga:
 
 - Ne zahteva Wi-Fi ruter niti pristupnu tačku
 - Kašnjenje je ispod 1 ms
@@ -70,24 +72,25 @@ Za bežičnu komunikaciju korišćen je **ESP-NOW protokol** — Espressifov vla
 
 Sistem se sastoji od dve fizički odvojene jedinice koje komuniciraju bežično:
 
-- **Predajna jedinica** (NodeMCU): četiri dugmeta spojena na digitalne ulaze sa internim pull-up otpornicima. Bez eksternih otpornika. Dugmad su smeštena na breadboard-u i razdvojena po osama igrača.
-- **Prijemna jedinica** (D1 Mini): SPI OLED ekran spojen na 6 pinova (SCL, SDA, DC, RES, GND, VCC). Ekran osvežava sliku svaki put kada se primi nova poruka. Pasivni buzzer spojen direktno na pin D0 i GND — bez eksternih otpornika.
+- **Predajna jedinica** (NodeMCU): četiri dugmeta spojena na digitalne ulaze sa internim pull-up otpornicima. Bez eksternih otpornika. Dugmad su smeštena na breadboard-u i razdvojena po osama igrača. SW-420 senzor vibracija spojen na digitalni pin D7, detektuje mehanički impuls odbitka loptice od površine stola i šalje `RALLY` poruku prijemniku.
+- **Prijemna jedinica** (D1 Mini): SPI OLED ekran spojen na 6 pinova (SCL, SDA, DC, RES, GND, VCC). Ekran osvežava sliku svaki put kada se primi nova poruka. Pasivni buzzer spojen direktno na pin D0 i GND - bez eksternih otpornika.
 
 ### Softverska kompleksnost
 
-- **Debouncing dugmadi** bez `delay()` funkcije — korišćenjem praćenja stanja i vremenskih oznaka
+- **Debouncing dugmadi** bez `delay()` funkcije - korišćenjem praćenja stanja i vremenskih oznaka
 - **Detekcija kombinovanog pritiska** dugmadi oba igrača istovremeno sa vremenskim pragom od 2 sekunde A+ i B+ zajedno pokreću novi meč, A− i B− zajedno resetuju set. Ovaj dizajn zahteva saglasnost oba igrača za svaku specijalnu komandu, čime se sprečava slučajno aktiviranje.
 - **ESP-NOW callback rukovanje**: prijem podataka odvija se u prekidnoj rutini koja mora biti kratka. Svi sporedni procesi (ažuriranje ekrana, logika rezultata) prebačeni su u `loop()` funkciju korišćenjem volatile bita (`volatile bool`), čime se sprečava pad sistema usled prekoračenja watchdog tajmera
 - **Automatsko praćenje setova** prema pravilima stonog tenisa (11 poena, razlika 2)
 - **Rotacija strana između setova**: logički volatile bit (`sidesSwapped`) prati da li su strane zamenjene. Prijem poruka ostaje nepromenjen, remapiranje A↔B akcija vrši se u `loop()` funkciji pre obrade rezultata, čime se postiže transparentna zamena bez ikakvih izmena na predajniku. Komanda `NEWGAME` resetuje flag na početnu vrednost.
 - **Zvučna signalizacija**: četiri odvojene funkcije (`beepPoint()`, `beepUndo()`, `beepSet()`, `beepReset()`) generišu tonove različite frekvencije i trajanja korišćenjem `tone()` funkcije. Svaki događaj ima prepoznatljiv zvuk čime igrači dobijaju povratnu informaciju bez gledanja u ekran.
+- **Statistika razmene**: prijemnik broji `RALLY` poruke po poenu, čuva vrednost najduže razmene i resetuje brojač pri svakom novom poenu.
 - Kod je organizovan u odvojene funkcije: `onReceive()`, `updateDisplay()`, `checkSet()`, `beepPoint()`, `beepUndo()`, `beepSet()`, `beepReset()`
 
 ---
 
 ## 5. Šema povezivanja
 
-### Predajnik — NodeMCU v3
+### Predajnik - NodeMCU v3
 
 ```
 NodeMCU v3
@@ -97,26 +100,28 @@ NodeMCU v3
 │  D2 (GPIO4)  ───────┼──── Dugme A-  ──── GND
 │  D5 (GPIO14) ───────┼──── Dugme B+  ──── GND
 │  D6 (GPIO12) ───────┼──── Dugme B-  ──── GND
+│  D7 (GPIO13) ───────┼──── SW-420 DO
 │                     │
 │  3V3, GND           │     (napajanje)
 └─────────────────────┘
 
 * Svi pinovi konfigurisani kao INPUT_PULLUP
 * Dugme zatvara strujno kolo prema GND pritiskom
+* SW-420: digitalni izlaz HIGH pri detekciji vibracije
 ```
 
-### Prijemnik — WeMos D1 Mini + OLED + Buzzer
+### Prijemnik - WeMos D1 Mini + OLED + Buzzer
 
 ```
 D1 Mini              OLED SSD1306 (SPI)
 ┌──────────┐         ┌──────────────┐
 │          │         │              │
-│  D5 ─────┼─────────┼─ SCL        │
-│  D7 ─────┼─────────┼─ SDA (MOSI) │
-│  D1 ─────┼─────────┼─ DC         │
-│  D3 ─────┼─────────┼─ RES        │
-│  3V3 ────┼─────────┼─ VCC        │
-│  GND ────┼─────────┼─ GND        │
+│  D5 ─────┼─────────┼─ SCL         │
+│  D7 ─────┼─────────┼─ SDA (MOSI)  │
+│  D1 ─────┼─────────┼─ DC          │
+│  D3 ─────┼─────────┼─ RES         │
+│  3V3 ────┼─────────┼─ VCC         │
+│  GND ────┼─────────┼─ GND         │
 │          │         └──────────────┘
 │  D0 ─────┼──── Buzzer (+)
 │  GND ────┼──── Buzzer (-)
@@ -150,7 +155,7 @@ D1 Mini              OLED SSD1306 (SPI)
 │                        │  Setovi 1:0  │             │
 │                        │ B<---  --->A │  (rotacija) │
 │                        │   07: 03     │             │
-│                        │  A        B  │             │
+│                        │ Rally: 12    │             │
 │                        └──────────────┘             │
 └─────────────────────────────────────────────────────┘
 ```
