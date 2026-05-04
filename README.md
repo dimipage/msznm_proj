@@ -149,7 +149,7 @@ D1 Mini              OLED SSD1306 (SPI)
 ┌─────────────────────────────────────────────────────┐
 │                  PRIJEMNA JEDINICA                  │
 │                                                     │
-│  ············► D1 Mini ──► OLED ekran + Buzzer          │
+│  ············► D1 Mini ──► OLED ekran + Buzzer      │
 │                                                     │
 │                        ┌──────────────┐             │
 │                        │  Setovi 1:0  │             │
