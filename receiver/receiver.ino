@@ -13,6 +13,8 @@ Adafruit_SSD1306 display(128, 64, &SPI, OLED_DC, OLED_RES, OLED_CS);
 
 int scoreA = 0, scoreB = 0;
 int setA = 0, setB = 0;
+int rallyCount = 0;
+int maxRally = 0;
 bool sidesSwapped = false;
 
 struct Message { char action[16]; };
@@ -67,22 +69,24 @@ void updateDisplay() {
   display.setCursor(0, 0);
   display.printf("Sets  %d : %d", setA, setB);
 
+  // Strana indikator
   display.setCursor(0, 10);
-  if (!sidesSwapped) {
-    display.print("A<---       --->B");
-  } else {
-    display.print("B<---       --->A");
-  }
+  if (!sidesSwapped) display.print("A<---       --->B");
+  else               display.print("B<---       --->A");
 
-  display.setTextSize(3);
+  // Veliki rezultat
+  display.setTextSize(2);
   char buf[16];
-  snprintf(buf, sizeof(buf), "%2d:%2d", scoreA, scoreB);
-  display.setCursor(0, 24);
+  snprintf(buf, sizeof(buf), "%2d : %2d", scoreA, scoreB);
+  display.setCursor(0, 22);
   display.print(buf);
 
+  // Rally statistika
   display.setTextSize(1);
+  display.setCursor(0, 46);
+  display.printf("Rally:  %d", rallyCount);
   display.setCursor(0, 56);
-  display.print("  A            B");
+  display.printf("Max:    %d", maxRally);
 
   display.display();
 }
@@ -132,28 +136,40 @@ void loop() {
     }
 
     if (strncmp(action, "A+", 2) == 0) {
+      if (rallyCount > maxRally) 
+        maxRally = rallyCount;
+      rallyCount = 0;
       scoreA++;
       beepPoint();
     } else if (strncmp(action, "A-", 2) == 0) {
       scoreA = max(0, scoreA - 1);
       beepUndo();
     } else if (strncmp(action, "B+", 2) == 0) {
+      if (rallyCount > maxRally) 
+        maxRally = rallyCount;
+      rallyCount = 0;
       scoreB++;
       beepPoint();
     } else if (strncmp(action, "B-", 2) == 0) {
       scoreB = max(0, scoreB - 1);
       beepUndo();
     } else if (strncmp(action, "RESET", 5) == 0) {
-      scoreA = 0;
+      scoreA = 0; 
       scoreB = 0;
+      rallyCount = 0;
       beepReset();
     } else if (strncmp(action, "NEWGAME", 7) == 0) {
-      scoreA = 0;
-      scoreB = 0;
-      setA = 0;
+      scoreA = 0; 
+      scoreB = 0; 
+      setA = 0; 
       setB = 0;
+      rallyCount = 0; 
+      maxRally = 0;
       sidesSwapped = false;
       beepReset();
+    }else if (strncmp(action, "RALLY", 5) == 0) {
+      rallyCount++;
+      updateDisplay();
     }
 
     checkSet();

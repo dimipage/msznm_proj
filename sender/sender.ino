@@ -8,7 +8,7 @@ uint8_t receiverMAC[] = {0x2C, 0xF4, 0x32, 0x77, 0x84, 0x03};
 #define BTN_A_MINUS 4   // D2
 #define BTN_B_PLUS  14  // D5
 #define BTN_B_MINUS 12  // D6
-
+#define VIBRATION_PIN D7
 #define HOLD_TIME_MS 2000
 
 struct Message { char action[16]; };
@@ -24,6 +24,10 @@ void sendAction(const char* action) {
 bool btnPressed(int pin) {
   return digitalRead(pin) == LOW;
 }
+
+// Vibration params
+unsigned long lastVibration = 0;
+#define VIBRATION_DEBOUNCE 100  // ms
 
 // Combo state (NEWGAME)
 unsigned long holdStartNewGame = 0;
@@ -51,7 +55,8 @@ void setup() {
   pinMode(BTN_A_MINUS, INPUT_PULLUP);
   pinMode(BTN_B_PLUS,  INPUT_PULLUP);
   pinMode(BTN_B_MINUS, INPUT_PULLUP);
-
+  pinMode(VIBRATION_PIN, INPUT);
+  
   WiFi.mode(WIFI_STA);
   WiFi.disconnect();
   esp_now_init();
@@ -88,6 +93,13 @@ void loop() {
     }
   } else {
     holdingReset = false;
+  }
+
+  if (digitalRead(VIBRATION_PIN) == HIGH) {
+    if (millis() - lastVibration > VIBRATION_DEBOUNCE) {
+      sendAction("RALLY");
+      lastVibration = millis();
+    }
   }
 
   // Single press
